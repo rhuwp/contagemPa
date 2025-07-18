@@ -1,7 +1,7 @@
 // src/pages/PainelPA.js
 
 import { useEffect, useState } from "react";
-import { db } from "../firebaseConfig";
+import { db, auth } from "../firebaseConfig";
 import {
   collection,
   updateDoc,
@@ -12,8 +12,19 @@ import {
   where,
   addDoc,
 } from "firebase/firestore";
+import {
+  signOut,
+  onAuthStateChanged
+} from "firebase/auth";
+import { useNavigate } from "react-router-dom";
 
 export default function PainelPA() {
+  // Estados de autenticação simplificados
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
+
+  // Estados existentes
   const [envios, setEnvios] = useState([]);
   const [mudancasPendentes, setMudancasPendentes] = useState({});
   const [decrementouNesteTurno, setDecrementouNesteTurno] = useState(false);
@@ -26,6 +37,44 @@ export default function PainelPA() {
     quantidade: 1,
     justificativa: ''
   });
+
+  // Verificar autenticação
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (user && user.email === "prontoatendimento@ipo.com.br") {
+        setIsLoggedIn(true);
+        console.log("✅ Usuário PA autenticado:", user.email);
+      } else {
+        setIsLoggedIn(false);
+        if (user) {
+          console.log("❌ Email não autorizado para PA:", user.email);
+          // Redirecionar para login se não for o email correto
+          navigate("/login");
+        } else {
+          // Usuário não logado, redirecionar para login
+          navigate("/login");
+        }
+      }
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, [navigate]);
+
+  // Função de logout
+  const handleLogout = async () => {
+    try {
+      await registrarLog("pa_logout", {
+        email: auth.currentUser?.email,
+        timestamp: new Date().toISOString()
+      });
+      
+      await signOut(auth);
+      console.log("✅ Logout PA realizado");
+    } catch (error) {
+      console.error("❌ Erro no logout PA:", error);
+    }
+  };
 
   // Função para registrar logs
   const registrarLog = async (tipo, detalhes = {}) => {
@@ -399,24 +448,70 @@ export default function PainelPA() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 to-red-100 p-6 font-sans">
-      <div className="max-w-5xl mx-auto">
-        {/* Header */}
-        <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-          <div className="flex justify-between items-center">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-800 mb-2">
-                🏥 Painel do Pronto Atendimento
-              </h1>
-              <p className="text-gray-600">
-                Sistema de Fila Rotativa • {envios.length > 0 ? `Na vez: ${envios[0]?.medico}` : 'Nenhum envio ativo'}
-              </p>
-            </div>
-            <div className="text-right">
-              <div className="text-sm text-gray-500">Envios ativos</div>
-              <div className="text-2xl font-bold text-orange-600">{envios.length}</div>
-            </div>
+      {/* Tela de Loading ou Redirecionamento */}
+      {loading && (
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-600 mx-auto mb-4"></div>
+            <p className="text-gray-600">Verificando autenticação...</p>
           </div>
         </div>
+      )}
+
+      {/* Mensagem de Redirecionamento */}
+      {!loading && !isLoggedIn && (
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="bg-white rounded-lg shadow-md p-8 w-full max-w-md text-center">
+            <div className="text-6xl mb-4">🏥</div>
+            <h2 className="text-2xl font-bold text-gray-800 mb-4">
+              Painel do Pronto Atendimento
+            </h2>
+            <p className="text-gray-600 mb-6">
+              Para acessar este painel, você precisa fazer login com a conta autorizada.
+            </p>
+            <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 mb-6">
+              <p className="text-sm text-orange-800">
+                <strong>Acesso restrito:</strong> apenas prontoatendimento@ipo.com.br
+              </p>
+            </div>
+            <button
+              onClick={() => navigate("/login")}
+              className="w-full bg-orange-600 text-white py-3 rounded-lg hover:bg-orange-700 transition-colors font-medium"
+            >
+              Ir para Tela de Login
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Painel Principal - só mostra se estiver logado */}
+      {!loading && isLoggedIn && (
+        <div className="max-w-5xl mx-auto">
+          {/* Header */}
+          <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+            <div className="flex justify-between items-center">
+              <div>
+                <h1 className="text-3xl font-bold text-gray-800 mb-2">
+                  🏥 Painel do Pronto Atendimento
+                </h1>
+                <p className="text-gray-600">
+                  Sistema de Fila Rotativa • {envios.length > 0 ? `Na vez: ${envios[0]?.medico}` : 'Nenhum envio ativo'}
+                </p>
+              </div>
+              <div className="flex items-center gap-4">
+                <div className="text-right">
+                  <div className="text-sm text-gray-500">Envios ativos</div>
+                  <div className="text-2xl font-bold text-orange-600">{envios.length}</div>
+                </div>
+                <button
+                  onClick={handleLogout}
+                  className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600 transition-colors text-sm"
+                >
+                  Sair
+                </button>
+              </div>
+            </div>
+          </div>
 
         {/* Instruções */}
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
@@ -678,117 +773,118 @@ export default function PainelPA() {
             </div>
           )}
         </div>
-      </div>
-      
-      {/* Modal de Exceção */}
-      {mostrarModalExcecao && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
-            <div className="p-6">
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-xl font-bold text-gray-800">
-                  ⚡ Envio por Exceção
-                </h2>
-                <button
-                  onClick={fecharModalExcecao}
-                  className="text-gray-500 hover:text-gray-700 text-2xl"
-                >
-                  ✕
-                </button>
-              </div>
+        
+        {/* Modal de Exceção */}
+        {mostrarModalExcecao && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
+              <div className="p-6">
+                <div className="flex justify-between items-center mb-6">
+                  <h2 className="text-xl font-bold text-gray-800">
+                    ⚡ Envio por Exceção
+                  </h2>
+                  <button
+                    onClick={fecharModalExcecao}
+                    className="text-gray-500 hover:text-gray-700 text-2xl"
+                  >
+                    ✕
+                  </button>
+                </div>
 
-              {medicoSelecionadoExcecao && (
-                <div className="mb-6">
-                  <div className="bg-purple-50 border border-purple-200 rounded-lg p-4 mb-4">
-                    <h3 className="font-semibold text-purple-800">
-                      {medicoSelecionadoExcecao.medico}
-                    </h3>
-                    <p className="text-sm text-purple-600">
-                      Posição na fila: {envios.findIndex(e => e.id === medicoSelecionadoExcecao.id) + 1}°
-                    </p>
-                    <p className="text-sm text-purple-600">
-                      Pacientes atuais: {medicoSelecionadoExcecao.quantidade}
-                    </p>
-                  </div>
-
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Quantidade de pacientes a atender por exceção:
-                      </label>
-                      <p className="text-xs text-purple-600 mb-2">
-                        O médico será movido para o final da fila após atender por exceção.
+                {medicoSelecionadoExcecao && (
+                  <div className="mb-6">
+                    <div className="bg-purple-50 border border-purple-200 rounded-lg p-4 mb-4">
+                      <h3 className="font-semibold text-purple-800">
+                        {medicoSelecionadoExcecao.medico}
+                      </h3>
+                      <p className="text-sm text-purple-600">
+                        Posição na fila: {envios.findIndex(e => e.id === medicoSelecionadoExcecao.id) + 1}°
                       </p>
-                      <div className="flex items-center gap-3">
-                        <button
-                          onClick={() => setDadosExcecao(prev => ({ 
+                      <p className="text-sm text-purple-600">
+                        Pacientes atuais: {medicoSelecionadoExcecao.quantidade}
+                      </p>
+                    </div>
+
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Quantidade de pacientes a atender por exceção:
+                        </label>
+                        <p className="text-xs text-purple-600 mb-2">
+                          O médico será movido para o final da fila após atender por exceção.
+                        </p>
+                        <div className="flex items-center gap-3">
+                          <button
+                            onClick={() => setDadosExcecao(prev => ({ 
+                              ...prev, 
+                              quantidade: Math.max(1, prev.quantidade - 1) 
+                            }))}
+                            className="w-8 h-8 rounded-full bg-red-500 text-white hover:bg-red-600 font-bold"
+                          >
+                            -
+                          </button>
+                          <span className="w-8 text-center font-bold text-lg">
+                            {dadosExcecao.quantidade}
+                          </span>
+                          <button
+                            onClick={() => setDadosExcecao(prev => ({ 
+                              ...prev, 
+                              quantidade: Math.min(medicoSelecionadoExcecao.quantidade, prev.quantidade + 1)
+                            }))}
+                            disabled={dadosExcecao.quantidade >= medicoSelecionadoExcecao.quantidade}
+                            className={`w-8 h-8 rounded-full font-bold ${
+                              dadosExcecao.quantidade >= medicoSelecionadoExcecao.quantidade
+                                ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                : 'bg-green-500 text-white hover:bg-green-600'
+                            }`}
+                          >
+                            +
+                          </button>
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Justificativa para exceção: <span className="text-red-500">*</span>
+                        </label>
+                        <textarea
+                          value={dadosExcecao.justificativa}
+                          onChange={(e) => setDadosExcecao(prev => ({ 
                             ...prev, 
-                            quantidade: Math.max(1, prev.quantidade - 1) 
+                            justificativa: e.target.value 
                           }))}
-                          className="w-8 h-8 rounded-full bg-red-500 text-white hover:bg-red-600 font-bold"
-                        >
-                          -
-                        </button>
-                        <span className="w-8 text-center font-bold text-lg">
-                          {dadosExcecao.quantidade}
-                        </span>
-                        <button
-                          onClick={() => setDadosExcecao(prev => ({ 
-                            ...prev, 
-                            quantidade: Math.min(medicoSelecionadoExcecao.quantidade, prev.quantidade + 1)
-                          }))}
-                          disabled={dadosExcecao.quantidade >= medicoSelecionadoExcecao.quantidade}
-                          className={`w-8 h-8 rounded-full font-bold ${
-                            dadosExcecao.quantidade >= medicoSelecionadoExcecao.quantidade
-                              ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                              : 'bg-green-500 text-white hover:bg-green-600'
-                          }`}
-                        >
-                          +
-                        </button>
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 resize-none"
+                          rows="3"
+                          placeholder="Explique o motivo do envio por exceção (urgência médica, situação especial, etc.)"
+                        />
                       </div>
                     </div>
 
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Justificativa para exceção: <span className="text-red-500">*</span>
-                      </label>
-                      <textarea
-                        value={dadosExcecao.justificativa}
-                        onChange={(e) => setDadosExcecao(prev => ({ 
-                          ...prev, 
-                          justificativa: e.target.value 
-                        }))}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 resize-none"
-                        rows="3"
-                        placeholder="Explique o motivo do envio por exceção (urgência médica, situação especial, etc.)"
-                      />
+                    <div className="flex gap-3 pt-6 border-t mt-6">
+                      <button
+                        onClick={enviarExcecao}
+                        disabled={!dadosExcecao.justificativa.trim()}
+                        className={`flex-1 py-2 rounded-lg transition-colors font-medium ${
+                          dadosExcecao.justificativa.trim()
+                            ? 'bg-purple-600 text-white hover:bg-purple-700'
+                            : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                        }`}
+                      >
+                        ⚡ Enviar por Exceção
+                      </button>
+                      <button
+                        onClick={fecharModalExcecao}
+                        className="px-6 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors"
+                      >
+                        Cancelar
+                      </button>
                     </div>
                   </div>
-
-                  <div className="flex gap-3 pt-6 border-t mt-6">
-                    <button
-                      onClick={enviarExcecao}
-                      disabled={!dadosExcecao.justificativa.trim()}
-                      className={`flex-1 py-2 rounded-lg transition-colors font-medium ${
-                        dadosExcecao.justificativa.trim()
-                          ? 'bg-purple-600 text-white hover:bg-purple-700'
-                          : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                      }`}
-                    >
-                      ⚡ Enviar por Exceção
-                    </button>
-                    <button
-                      onClick={fecharModalExcecao}
-                      className="px-6 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors"
-                    >
-                      Cancelar
-                    </button>
-                  </div>
-                </div>
-              )}
+                )}
+              </div>
             </div>
           </div>
+        )}
         </div>
       )}
     </div>

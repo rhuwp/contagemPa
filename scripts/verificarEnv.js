@@ -1,6 +1,9 @@
 // scripts/verificarEnv.js
 // Script para verificar se todas as variáveis de ambiente estão configuradas
 
+// Carrega as variáveis do arquivo .env
+require('dotenv').config();
+
 const requiredEnvVars = [
   'REACT_APP_FIREBASE_API_KEY',
   'REACT_APP_FIREBASE_AUTH_DOMAIN',

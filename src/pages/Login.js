@@ -11,7 +11,13 @@ export default function Login() {
   const handleLogin = async () => {
     try {
       await signInWithEmailAndPassword(auth, email, senha);
-      navigate("/painel-secretaria");
+      
+      // Direcionar baseado no email
+      if (email.toLowerCase() === "prontoatendimento@ipo.com.br") {
+        navigate("/painel-pa");
+      } else {
+        navigate("/painel-secretaria");
+      }
     } catch (error) {
       alert("Erro ao entrar: " + error.message);
     }
