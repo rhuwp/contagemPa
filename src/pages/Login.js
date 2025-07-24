@@ -66,6 +66,16 @@ export default function Login() {
           </button>
         </div>
 
+        {/* Créditos do Desenvolvedor */}
+        <div className="mt-6 pt-4 border-t border-gray-200 text-center">
+          <p className="text-xs text-gray-500">
+            Sistema de Contagem PA v{process.env.REACT_APP_VERSION || '1.0.0'}
+          </p>
+          <p className="text-xs text-gray-400 mt-1">
+            Desenvolvido por <span className="font-semibold text-blue-600">{process.env.REACT_APP_DEVELOPER || 'Rhuan Martins'}</span>
+          </p>
+        </div>
+
 
 
 

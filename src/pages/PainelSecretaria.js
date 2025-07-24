@@ -553,6 +553,9 @@ export default function PainelSecretaria() {
             <h1 className="text-3xl font-bold text-gray-800 mb-2">
               👩‍💼 Painel da Secretária
             </h1>
+            <p className="text-xs text-gray-500 mb-2">
+              Desenvolvido por <span className="font-semibold text-blue-600">{process.env.REACT_APP_DEVELOPER || 'RHUAN Martins'}</span>
+            </p>
             {usuario && (
               <div className="text-gray-600">
                 <p className="mb-1">

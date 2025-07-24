@@ -497,6 +497,9 @@ export default function PainelPA() {
                 <p className="text-gray-600">
                   Sistema de Fila Rotativa • {envios.length > 0 ? `Na vez: ${envios[0]?.medico}` : 'Nenhum envio ativo'}
                 </p>
+                <p className="text-xs text-gray-500 mt-1">
+                  Desenvolvido por <span className="font-semibold text-orange-600">{process.env.REACT_APP_DEVELOPER || 'RHUAN Martins'}</span>
+                </p>
               </div>
               <div className="flex items-center gap-4">
                 <div className="text-right">

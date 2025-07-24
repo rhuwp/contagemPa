@@ -1239,6 +1239,9 @@ export default function Admin() {
             <div>
               <h1 className="text-2xl font-bold text-gray-800">Painel Administrativo</h1>
               <p className="text-gray-600">Gerencie o sistema Unimed</p>
+              <p className="text-xs text-gray-500 mt-1">
+                Desenvolvido por <span className="font-semibold text-red-600">{process.env.REACT_APP_DEVELOPER || 'RHUAN Martins'}</span>
+              </p>
             </div>
             <button
               onClick={handleLogout}
